@@ -48,6 +48,14 @@ Desktop.ini
 # Cache
 .cache/
 .tmp/
+
+# Backup and redundant documentation
+docs/backup/
+docs/SECURITY-CHANGELOG.md
+docs/SECURITY-HARDENED.md
+docs/SECURITY-IMPLEMENTATION-SUMMARY.md
+docs/SECURITY-QUICK-REFERENCE.md
+docs/test-security*.ps1
 temp/
 
 # Test coverage
