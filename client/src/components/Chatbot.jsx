@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Bot, User, Sparkles, Loader2, Download, BarChart3 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import apiService from '../services/api';
 
 /**
  * ChatGPT-like Chatbot Component
@@ -53,13 +54,11 @@ const Chatbot = ({ onDashboardData, isProcessing, dashboardContext }) => {
         requestBody.dashboardContext = dashboardContext;
       }
 
-      const response = await fetch('http://localhost:5000/api/chat/message', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
-      });
-
-      const data = await response.json();
+      const data = await apiService.sendMessage(
+        currentInput,
+        conversationId,
+        dashboardContext || undefined
+      );
 
       if (data.success) {
         // Add bot message
@@ -85,7 +84,7 @@ const Chatbot = ({ onDashboardData, isProcessing, dashboardContext }) => {
       setMessages(prev => [...prev, {
         id: Date.now() + 1,
         role: 'assistant',
-        content: `⚠️ ${error.message === 'Failed to fetch' ? 'Cannot connect to server. Make sure the backend is running on port 5000.' : error.message}`,
+        content: `⚠️ ${error.message === 'Failed to fetch' || error.code === 'ERR_NETWORK' ? 'Cannot connect to the AI server. Please try again.' : error.message}`,
         timestamp: new Date(),
         isError: true
       }]);

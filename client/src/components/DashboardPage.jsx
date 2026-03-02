@@ -5,6 +5,7 @@ import { ArrowLeft, Layers, Upload, X, Wifi, WifiOff, PanelLeftClose, PanelLeft,
 import Chatbot from './Chatbot';
 import Dashboard from './Dashboard';
 import CyberRadio from './CyberRadio';
+import apiService from '../services/api';
 
 const DashboardPage = () => {
   const navigate = useNavigate();
@@ -24,9 +25,8 @@ const DashboardPage = () => {
 
   const checkHealth = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/health');
-      const data = await res.json();
-      setApiStatus(data.status === 'OK' ? 'connected' : 'offline');
+      const data = await apiService.checkHealth();
+      setApiStatus(data.status === 'OK' || data.status === 'healthy' ? 'connected' : 'offline');
     } catch {
       setApiStatus('offline');
     }
@@ -44,17 +44,16 @@ const DashboardPage = () => {
     setIsProcessing(true);
     setUploadError('');
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      const res = await fetch('http://localhost:5000/api/upload/file', { method: 'POST', body: formData });
-      const data = await res.json();
+      const data = await apiService.uploadFile(file);
       if (data.success) {
+        const processed = data.data || data.processedData;
+        const fname = data.filename || data.fileName;
         setDashboardData({
-          data: data.processedData,
-          dataset: { name: data.fileName, description: 'Uploaded file', rowCount: data.processedData?.metadata?.totalRows }
+          data: processed,
+          dataset: { name: fname, description: 'Uploaded file', rowCount: processed?.metadata?.totalRows }
         });
         setInsights(data.insights);
-        setDatasetInfo({ name: data.fileName, description: 'Uploaded CSV/Excel file', rowCount: data.processedData?.metadata?.totalRows });
+        setDatasetInfo({ name: fname, description: 'Uploaded CSV file', rowCount: processed?.metadata?.totalRows });
         setShowUpload(false);
         setUploadError('');
       } else {
@@ -62,7 +61,7 @@ const DashboardPage = () => {
       }
     } catch (err) {
       console.error('Upload error:', err);
-      setUploadError('Cannot connect to server. Is backend running?');
+      setUploadError('Upload failed. Please try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -76,20 +75,15 @@ const DashboardPage = () => {
     }
     setIsProcessing(true);
     try {
-      const res = await fetch('http://localhost:5000/api/upload/database', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: dbForm.type,
-          host: dbForm.host,
-          port: dbForm.port ? parseInt(dbForm.port) : undefined,
-          user: dbForm.user,
-          password: dbForm.password,
-          database: dbForm.database,
-          query: dbForm.query
-        })
+      const data = await apiService.connectDatabase({
+        type: dbForm.type,
+        host: dbForm.host,
+        port: dbForm.port ? parseInt(dbForm.port) : undefined,
+        user: dbForm.user,
+        password: dbForm.password,
+        database: dbForm.database,
+        query: dbForm.query
       });
-      const data = await res.json();
       if (data.success) {
         setDashboardData({
           data: data.processedData,

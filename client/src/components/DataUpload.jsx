@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Upload, Database, X } from 'lucide-react';
+import apiService from '../services/api';
 
 const DataUpload = ({ onDataUploaded }) => {
   const [uploading, setUploading] = useState(false);
@@ -9,10 +10,7 @@ const DataUpload = ({ onDataUploaded }) => {
     if (!file) return;
     setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      const res = await fetch('http://localhost:5000/api/upload/file', { method: 'POST', body: formData });
-      const data = await res.json();
+      const data = await apiService.uploadFile(file);
       if (data.success) {
         onDataUploaded?.(data);
       } else {
