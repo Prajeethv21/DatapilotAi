@@ -33,7 +33,7 @@ const DashboardPage = () => {
   };
 
   const handleDashboardData = (processedData, newInsights, dataset) => {
-    setDashboardData(processedData);
+    setDashboardData({ data: processedData, dataset: dataset || null });
     setInsights(newInsights);
     setDatasetInfo(dataset || null);
   };

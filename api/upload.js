@@ -31,7 +31,7 @@ const upload = multer({
   }
 });
 
-// Parse CSV and compute stats
+// Parse CSV and compute stats matching DatasetEngine output structure exactly
 function processCSV(csvString, filename) {
   const parsed = Papa.parse(csvString, {
     header: true,
@@ -50,24 +50,43 @@ function processCSV(csvString, filename) {
     columnTypes[field] = numericCount > values.length * 0.7 ? 'numeric' : 'categorical';
   });
 
-  // Calculate basic stats for numeric columns
+  // Calculate statistics matching DatasetEngine.calculateStatistics() exactly
   const statistics = {};
-  fields.filter(f => columnTypes[f] === 'numeric').forEach(field => {
-    const nums = data.map(r => r[field]).filter(v => typeof v === 'number' && !isNaN(v));
-    if (nums.length === 0) return;
-    const sum = nums.reduce((a, b) => a + b, 0);
-    const avg = sum / nums.length;
-    const sorted = [...nums].sort((a, b) => a - b);
-    statistics[field] = {
-      min: sorted[0],
-      max: sorted[sorted.length - 1],
-      avg: Math.round(avg * 100) / 100,
-      sum: Math.round(sum * 100) / 100,
-      count: nums.length
-    };
+  fields.forEach(field => {
+    const type = columnTypes[field];
+    if (type === 'numeric') {
+      const nums = data.map(r => r[field]).filter(v => typeof v === 'number' && !isNaN(v));
+      if (nums.length === 0) return;
+      const sum = nums.reduce((a, b) => a + b, 0);
+      const average = sum / nums.length;
+      const sorted = [...nums].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      const median = sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+      statistics[field] = {
+        type: 'numeric',
+        count: nums.length,
+        sum,
+        average,
+        min: sorted[0],
+        max: sorted[sorted.length - 1],
+        median
+      };
+    } else {
+      const values = data.map(r => r[field]).filter(v => v != null);
+      const frequency = {};
+      values.forEach(v => { frequency[String(v)] = (frequency[String(v)] || 0) + 1; });
+      statistics[field] = {
+        type: 'categorical',
+        uniqueValues: Object.keys(frequency).length,
+        topValues: Object.entries(frequency)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 10)
+          .map(([value, count]) => ({ value, count }))
+      };
+    }
   });
 
-  // Prepare chart data - top categorical breakdown for first categorical column
+  // Chart data
   const chartData = {};
   const catColumns = fields.filter(f => columnTypes[f] === 'categorical');
   const numColumns = fields.filter(f => columnTypes[f] === 'numeric');
@@ -81,20 +100,34 @@ function processCSV(csvString, filename) {
       if (!grouped[key]) grouped[key] = 0;
       if (typeof row[numCol] === 'number') grouped[key] += row[numCol];
     });
-    const sorted = Object.entries(grouped).sort((a, b) => b[1] - a[1]).slice(0, 10);
-    chartData.barChart = sorted.map(([name, value]) => ({ name, value: Math.round(value * 100) / 100 }));
+    const sortedEntries = Object.entries(grouped).sort((a, b) => b[1] - a[1]).slice(0, 10);
+    chartData.barChart = sortedEntries.map(([name, value]) => ({ name, value: Math.round(value * 100) / 100 }));
+    chartData.pieChart = sortedEntries.slice(0, 6).map(([name, value]) => ({ name, value: Math.round(value * 100) / 100 }));
     chartData.labelX = catCol;
     chartData.labelY = numCol;
   }
 
+  // Line chart from time/year columns
+  const timeCol = fields.find(f => /year|date|time|month/i.test(f));
+  if (timeCol && numColumns.length > 0) {
+    const numCol = numColumns.find(f => f !== timeCol) || numColumns[0];
+    chartData.lineChart = data
+      .filter(r => r[timeCol] && r[numCol] != null)
+      .slice(0, 100)
+      .map(r => ({ name: String(r[timeCol]), value: r[numCol] }));
+  }
+
   // KPIs
-  const kpis = numColumns.slice(0, 4).map(field => ({
-    label: field,
-    value: statistics[field]?.sum ?? statistics[field]?.avg ?? 0,
-    avg: statistics[field]?.avg,
-    min: statistics[field]?.min,
-    max: statistics[field]?.max
-  }));
+  const kpis = numColumns.slice(0, 4).map(field => {
+    const s = statistics[field];
+    return {
+      label: field,
+      value: s.sum,
+      avg: s.average,
+      min: s.min,
+      max: s.max
+    };
+  });
 
   return {
     metadata: { totalRows: data.length, columns: fields.length, filename, columnTypes },
