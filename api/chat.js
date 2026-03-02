@@ -1,10 +1,12 @@
 /**
  * Vercel Serverless Function - Chat API
- * POST /api/chat  (handles both /api/chat and /api/chat/message via rewrite)
+ * POST /api/chat  (handles /api/chat/message and /api/chat/analyze via rewrites)
  */
 
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const Groq = require('groq-sdk');
+const DatasetFinder = require('../server/services/DatasetFinder');
+const DatasetEngine = require('../server/services/DatasetEngine');
 
 // CORS helper
 function setCors(res) {
@@ -34,8 +36,6 @@ function initAI() {
 
 async function generateReply(messages) {
   initAI();
-
-  // Try Gemini first
   if (geminiModel) {
     try {
       const history = messages.slice(0, -1).map(m => ({
@@ -47,8 +47,6 @@ async function generateReply(messages) {
       return result.response.text();
     } catch (e) { console.warn('Gemini failed:', e.message); }
   }
-
-  // Fallback to Groq
   if (groqClient) {
     try {
       const completion = await groqClient.chat.completions.create({
@@ -60,8 +58,16 @@ async function generateReply(messages) {
       return completion.choices[0]?.message?.content || 'No response generated.';
     } catch (e) { console.warn('Groq failed:', e.message); }
   }
+  return 'No AI provider configured. Please add GEMINI_API_KEY or GROQ_API_KEY in your Vercel environment variables.';
+}
 
-  return 'No AI provider is configured. Please add GEMINI_API_KEY or GROQ_API_KEY in your Vercel environment variables.';
+async function generateInsights(processedData, topic) {
+  const summary = `Dataset: "${topic}". ${processedData.metadata.totalRows} rows, ${processedData.metadata.columns} columns. ` +
+    `KPIs: ${(processedData.kpis || []).slice(0, 3).map(k => `${k.label}: avg ${k.avg ?? k.value}`).join(', ')}.`;
+  return await generateReply([{
+    role: 'user',
+    content: `Analyze this dataset and provide 3-4 concise key insights in bullet points:\n${summary}`
+  }]);
 }
 
 async function detectIntent(message) {
@@ -77,7 +83,7 @@ async function detectIntent(message) {
   return { intent: 'chat' };
 }
 
-// In-memory conversations (per cold-start instance)
+// In-memory conversations per cold-start instance
 const conversations = new Map();
 
 module.exports = async (req, res) => {
@@ -94,7 +100,6 @@ module.exports = async (req, res) => {
 
     const cleanMessage = message.trim().slice(0, 2000);
     const convId = conversationId || 'default';
-
     if (!conversations.has(convId)) conversations.set(convId, []);
     const history = conversations.get(convId);
 
@@ -103,19 +108,39 @@ module.exports = async (req, res) => {
     let responseData;
 
     if (intent === 'dashboard') {
-      // Provide a helpful AI response about dashboard creation
-      const aiHistory = [{
-        role: 'user',
-        content: `The user wants to create a dashboard about "${topic}". Explain what insights you'd visualize and mention that if they upload a CSV file, you can create real charts. Keep it concise and helpful.`
-      }];
-      const reply = await generateReply(aiHistory);
-      responseData = { type: 'chat', reply };
+      // Auto-find and load a real dataset
+      try {
+        const dataset = await DatasetFinder.findDataset(topic || cleanMessage);
+        if (!dataset || !dataset.rawData) throw new Error('No dataset found');
+
+        const processedData = DatasetEngine.processDataset(dataset.rawData);
+        const insights = await generateInsights(processedData, topic || cleanMessage);
+
+        responseData = {
+          type: 'dashboard',
+          reply: `I found data about **${dataset.metadata.name}**! Here's your dashboard with ${dataset.metadata.rowCount} rows.`,
+          processedData,
+          insights,
+          dataset: {
+            name: dataset.metadata.name,
+            description: dataset.metadata.description,
+            source: dataset.metadata.source,
+            rowCount: dataset.metadata.rowCount
+          }
+        };
+      } catch (err) {
+        console.warn('Dataset fetch failed:', err.message);
+        responseData = {
+          type: 'chat',
+          reply: `I couldn't auto-load a dataset for "${topic}". Try uploading a CSV file using the Upload button instead!`
+        };
+      }
     } else if (dashboardContext) {
-      // Answer a question about the current dashboard
-      const contextSummary = `Current dashboard context: ${JSON.stringify(dashboardContext).slice(0, 800)}`;
-      history.push({ role: 'user', content: `${contextSummary}\n\nUser question: ${cleanMessage}` });
+      // Answer question about current dashboard
+      const contextSummary = `Current dashboard: ${JSON.stringify(dashboardContext).slice(0, 600)}`;
+      history.push({ role: 'user', content: `${contextSummary}\n\nUser: ${cleanMessage}` });
       const reply = await generateReply(history);
-      history[history.length - 1] = { role: 'user', content: cleanMessage }; // clean up context from history
+      history[history.length - 1] = { role: 'user', content: cleanMessage };
       history.push({ role: 'assistant', content: reply });
       responseData = { type: 'dashboard_answer', reply };
     } else {
@@ -126,9 +151,7 @@ module.exports = async (req, res) => {
       responseData = { type: 'chat', reply };
     }
 
-    // Keep conversation history manageable
     if (history.length > 40) conversations.set(convId, history.slice(-30));
-
     res.status(200).json({ success: true, ...responseData });
 
   } catch (error) {
