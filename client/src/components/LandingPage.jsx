@@ -84,9 +84,7 @@ const LandingPage = () => {
       >
         <div className="max-w-6xl mx-auto px-6 h-16 flex justify-between items-center">
           <motion.div className="flex items-center gap-2.5" whileHover={{ scale: 1.02 }}>
-            <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
-              <Brain size={18} className="text-white" />
-            </div>
+            <img src="/datapilot-logo.svg" alt="DataPilot Logo" className="w-9 h-9" />
             <div>
               <h1 className="text-sm font-bold tracking-tight">DataPilot AI</h1>
               <p className="text-[9px] text-gray-600 font-medium tracking-wider uppercase">Intelligent Analytics</p>

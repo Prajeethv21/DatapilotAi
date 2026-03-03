@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Brain, Zap, Sparkles, Layers } from 'lucide-react';
+import { Zap, Sparkles, Layers } from 'lucide-react';
 import './LoadingScreen.css';
 
 const LoadingScreen = ({ onLoadingComplete }) => {
@@ -102,7 +102,7 @@ const LoadingScreen = ({ onLoadingComplete }) => {
             className="mt-10 mb-6 flex items-center justify-center gap-2 text-gray-400"
           >
             <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}>
-              {stage < 2 ? <Brain size={14} /> : stage < 3 ? <Zap size={14} /> : <Sparkles size={14} />}
+              {stage < 2 ? <img src="/datapilot-logo.svg" alt="" style={{width:14,height:14}} /> : stage < 3 ? <Zap size={14} /> : <Sparkles size={14} />}
             </motion.div>
             <span className="text-xs font-medium">{stages[stage]}</span>
           </motion.div>

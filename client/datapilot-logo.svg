@@ -1,4 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <circle cx="100" cy="100" r="95" fill="none" stroke="#000" stroke-width="10"/>
-  <text x="100" y="130" font-family="Arial, sans-serif" font-size="80" font-weight="bold" text-anchor="middle" fill="#000">DP</text>
+  <defs>
+    <linearGradient id="dpGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+  </defs>
+  <circle cx="100" cy="100" r="90" fill="none" stroke="url(#dpGrad)" stroke-width="10"/>
+  <!-- Gauge / dial arcs -->
+  <path d="M 45 140 A 65 65 0 1 1 155 140" fill="none" stroke="url(#dpGrad)" stroke-width="12" stroke-linecap="round"/>
+  <!-- Needle -->
+  <line x1="100" y1="100" x2="148" y2="68" stroke="url(#dpGrad)" stroke-width="8" stroke-linecap="round"/>
+  <!-- Center dot -->
+  <circle cx="100" cy="100" r="10" fill="url(#dpGrad)"/>
+  <!-- Tick marks -->
+  <line x1="45" y1="140" x2="52" y2="134" stroke="#06b6d4" stroke-width="5" stroke-linecap="round"/>
+  <line x1="100" y1="35" x2="100" y2="44" stroke="#06b6d4" stroke-width="5" stroke-linecap="round"/>
+  <line x1="155" y1="140" x2="148" y2="134" stroke="#06b6d4" stroke-width="5" stroke-linecap="round"/>
 </svg>
