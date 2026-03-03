@@ -1,19 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
   <defs>
-    <linearGradient id="dpGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#3b82f6"/>
       <stop offset="100%" stop-color="#06b6d4"/>
     </linearGradient>
   </defs>
-  <circle cx="100" cy="100" r="90" fill="none" stroke="url(#dpGrad)" stroke-width="10"/>
-  <!-- Gauge / dial arcs -->
-  <path d="M 45 140 A 65 65 0 1 1 155 140" fill="none" stroke="url(#dpGrad)" stroke-width="12" stroke-linecap="round"/>
+  <!-- Outer gauge arc (bottom-open semicircle) -->
+  <path d="M 3 15 A 9 9 0 1 1 21 15" stroke="url(#g)" stroke-width="2" stroke-linecap="round" fill="none"/>
   <!-- Needle -->
-  <line x1="100" y1="100" x2="148" y2="68" stroke="url(#dpGrad)" stroke-width="8" stroke-linecap="round"/>
+  <line x1="12" y1="12" x2="17.5" y2="7" stroke="url(#g)" stroke-width="2" stroke-linecap="round"/>
   <!-- Center dot -->
-  <circle cx="100" cy="100" r="10" fill="url(#dpGrad)"/>
-  <!-- Tick marks -->
-  <line x1="45" y1="140" x2="52" y2="134" stroke="#06b6d4" stroke-width="5" stroke-linecap="round"/>
-  <line x1="100" y1="35" x2="100" y2="44" stroke="#06b6d4" stroke-width="5" stroke-linecap="round"/>
-  <line x1="155" y1="140" x2="148" y2="134" stroke="#06b6d4" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="12" cy="12" r="1.8" fill="url(#g)"/>
+  <!-- Left tick -->
+  <line x1="3.8" y1="17.2" x2="5.2" y2="15.8" stroke="#06b6d4" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Top tick -->
+  <line x1="12" y1="3" x2="12" y2="4.8" stroke="#06b6d4" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Right tick -->
+  <line x1="20.2" y1="17.2" x2="18.8" y2="15.8" stroke="#06b6d4" stroke-width="1.5" stroke-linecap="round"/>
 </svg>
